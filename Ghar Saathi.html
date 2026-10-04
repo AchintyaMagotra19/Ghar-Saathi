@@ -1,0 +1,865 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ghar Saathi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: split sign-in screen (brand rota left, form right); then a two-column order flow with a sticky price summary. */
+:root {
+  --bg: #eef2f0;
+  --surface: #ffffff;
+  --ink: #10302d;
+  --muted: #52706c;
+  --line: #d3ddd9;
+  --accent: #0f6b62;
+  --accent-ink: #ffffff;
+  --marigold: #f2a900;
+  --marigold-ink: #3a2800;
+  --danger: #b3261e;
+  --tint: #e2ece9;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1a19; --surface: #132625; --ink: #e6f0ee; --muted: #8faaa6; --line: #24403d;
+    --accent: #3fc1ae; --accent-ink: #06211e; --marigold: #f2b93b; --marigold-ink: #2c1f00;
+    --danger: #ff8a80; --tint: #1a3331; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1a19; --surface: #132625; --ink: #e6f0ee; --muted: #8faaa6; --line: #24403d;
+  --accent: #3fc1ae; --accent-ink: #06211e; --marigold: #f2b93b; --marigold-ink: #2c1f00;
+  --danger: #ff8a80; --tint: #1a3331; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-inline: 16px;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+/* ---------- Auth ---------- */
+#auth { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; max-width: 1080px; margin-inline: auto; align-items: center; padding-block: 24px; }
+.brandside { padding: 24px 40px 24px 8px; display: flex; flex-direction: column; gap: 28px; }
+.logo { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+.logo-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; }
+.logo-mark svg { width: 20px; height: 20px; }
+.brandside h1 { font-size: clamp(34px, 5vw, 56px); font-weight: 700; }
+.brandside .lede { color: var(--muted); max-width: 40ch; font-size: 16px; }
+.rota { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 16px; max-width: 380px; }
+.rota-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; gap: 12px; }
+.rota-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
+.rota-day { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 0.06em; }
+.rota-dot { height: 34px; border-radius: 8px; background: var(--tint); }
+.rota-dot.on { background: var(--accent); }
+.rota-dot.hot { background: var(--marigold); }
+.rota-foot { margin-top: 12px; font-size: 13px; color: var(--muted); }
+
+.authcard { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 28px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 1px 0 var(--line), 0 18px 40px -28px rgba(8, 40, 36, 0.45); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--tint); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; padding: 10px; border-radius: 9px; font-weight: 700; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.authcard h2 { font-size: 26px; }
+form.stack { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 700; }
+.input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); min-width: 0; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.input[aria-invalid="true"] { border-color: var(--danger); }
+.err { color: var(--danger); font-size: 13px; min-height: 0; }
+.err:empty { display: none; }
+.btn { border: 0; border-radius: 12px; padding: 13px 18px; font-weight: 700; background: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn.small { padding: 8px 12px; font-size: 13px; border-radius: 9px; }
+.demo { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 16px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- App ---------- */
+#app { max-width: 1080px; margin-inline: auto; padding-block: 16px 48px; display: flex; flex-direction: column; gap: 24px; }
+.topbar { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; justify-content: space-between; }
+.topbar .who { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; min-width: 0; }
+.topbar .who strong { color: var(--ink); overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--line); }
+.tabs button { border: 0; background: none; padding: 10px 14px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1.5px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--marigold); }
+.page-title { display: flex; flex-direction: column; gap: 6px; }
+.page-title h2 { font-size: clamp(26px, 4vw, 38px); }
+.page-title p { color: var(--muted); max-width: 56ch; }
+
+.order { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.steps { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.step { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.step-head { display: flex; flex-direction: column; gap: 2px; }
+.step-head h3 { font-size: 20px; }
+.step-head p { color: var(--muted); font-size: 14px; }
+
+.services { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.svc { text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.svc:hover { border-color: var(--accent); }
+.svc[aria-pressed="true"] { border-color: var(--accent); background: var(--tint); box-shadow: inset 0 0 0 1px var(--accent); }
+.svc .nm { font-weight: 700; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.svc .tick { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line); display: grid; place-items: center; flex: none; }
+.svc[aria-pressed="true"] .tick { background: var(--accent); border-color: var(--accent); }
+.svc .tick svg { width: 12px; height: 12px; opacity: 0; }
+.svc[aria-pressed="true"] .tick svg { opacity: 1; }
+.svc .ds { font-size: 13px; color: var(--muted); }
+.svc .pr { font-size: 13px; margin-top: 4px; }
+
+.plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.plans.sizes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.plans.roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fl { font-size: 13px; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1.5px solid var(--line); background: var(--bg); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 700; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.plan { text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
+.plan:hover { border-color: var(--accent); }
+.plan[aria-checked="true"] { border-color: var(--accent); background: var(--tint); box-shadow: inset 0 0 0 1px var(--accent); }
+.plan .pn { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.plan .pp { font-size: 17px; font-weight: 500; }
+.plan .pu { font-size: 12px; color: var(--muted); }
+.plan .pd { font-size: 12px; color: var(--muted); }
+.badge { align-self: flex-start; background: var(--marigold); color: var(--marigold-ink); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.02em; }
+.badge.none { visibility: hidden; }
+
+.days { display: flex; flex-wrap: wrap; gap: 8px; }
+.day { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; min-width: 52px; padding: 9px 0; text-align: center; font-weight: 700; font-size: 14px; }
+.day[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+.slot { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 4px; text-align: center; font-size: 13px; min-width: 0; }
+.slot:hover { border-color: var(--accent); }
+.slot[aria-pressed="true"] { border-color: var(--accent); background: var(--tint); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.summary { position: sticky; top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 18px 40px -30px rgba(8, 40, 36, 0.5); min-width: 0; }
+.summary h3 { font-size: 20px; }
+.sum-lines { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.sum-line { display: flex; justify-content: space-between; gap: 12px; }
+.sum-line span:first-child { color: var(--muted); }
+.sum-line span:last-child { text-align: right; overflow-wrap: anywhere; }
+.total { border-top: 1.5px dashed var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.total .big { font-family: var(--font-display); font-size: 34px; font-weight: 700; }
+.total .sub { color: var(--muted); font-size: 13px; }
+.hints { font-size: 13px; color: var(--muted); }
+
+.bookings { display: flex; flex-direction: column; gap: 12px; }
+.bk { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: start; }
+.bk h3 { font-size: 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pill { font-family: var(--font-body); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--tint); color: var(--accent); letter-spacing: 0.04em; text-transform: uppercase; }
+.bk .meta { color: var(--muted); font-size: 14px; display: flex; flex-direction: column; gap: 2px; margin-top: 6px; overflow-wrap: anywhere; }
+.bk .amt { text-align: right; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.bk .amt .big { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.empty { border: 1.5px dashed var(--line); border-radius: 14px; padding: 32px 20px; text-align: center; color: var(--muted); display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-weight: 700; z-index: 10; max-width: calc(100% - 32px); }
+
+@media (max-width: 860px) {
+  #auth { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .brandside { padding: 8px 0 24px; }
+  .order { grid-template-columns: minmax(0, 1fr); }
+  .summary { position: static; }
+  .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plans.sizes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .authcard { padding: 20px; }
+  .bk { grid-template-columns: minmax(0, 1fr); }
+  .bk .amt { align-items: flex-start; text-align: left; flex-direction: row; justify-content: space-between; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<main>
+  <!-- ======== Sign in / Sign up ======== -->
+  <section id="auth" aria-label="Account">
+    <div class="brandside">
+      <div class="logo">
+        <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></span>
+        Ghar Saathi
+      </div>
+      <h1>Help at home, on the days you pick.</h1>
+      <p class="lede">Book a househelp for one visit, or set a weekly, monthly or yearly routine. Pick the chores, the days and the exact arrival time. Or register as a househelp and take on jobs.</p>
+      <div class="rota" aria-hidden="true">
+        <div class="rota-head"><span class="label">A sample week</span><span class="mono" style="font-size:13px">3 visits</span></div>
+        <div class="rota-row">
+          <div class="rota-day">MON</div><div class="rota-day">TUE</div><div class="rota-day">WED</div><div class="rota-day">THU</div><div class="rota-day">FRI</div><div class="rota-day">SAT</div><div class="rota-day">SUN</div>
+          <div class="rota-dot on"></div><div class="rota-dot"></div><div class="rota-dot on"></div><div class="rota-dot"></div><div class="rota-dot hot"></div><div class="rota-dot"></div><div class="rota-dot"></div>
+        </div>
+        <p class="rota-foot">Sweeping, utensils and cooking, 7 to 10 am.</p>
+      </div>
+    </div>
+
+    <div class="authcard">
+      <div class="seg" role="tablist" aria-label="Sign in or create account">
+        <button type="button" role="tab" id="tab-signin" aria-selected="true" data-auth="signin">Sign in</button>
+        <button type="button" role="tab" id="tab-signup" aria-selected="false" data-auth="signup">Create account</button>
+      </div>
+
+      <form id="form-signin" class="stack" novalidate>
+        <h2>Welcome back</h2>
+        <div class="field">
+          <label for="si-id">Email or mobile number</label>
+          <input class="input" id="si-id" name="id" autocomplete="username" placeholder="you@example.com or 98XXXXXXXX">
+        </div>
+        <div class="field">
+          <label for="si-pw">Password</label>
+          <input class="input" id="si-pw" name="pw" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+        </div>
+        <p class="err" id="si-err" role="alert"></p>
+        <button class="btn" type="submit">Sign in</button>
+        <div class="demo">
+          <span>Example user: <span class="mono">demo@gharsaathi.in</span> / <span class="mono">demo123</span></span>
+          <button class="linkbtn" type="button" id="use-demo">Fill it in</button>
+        </div>
+        <div class="demo" style="border-top:0;padding-top:0">
+          <span>Example househelp: <span class="mono">helper@gharsaathi.in</span> / <span class="mono">demo123</span></span>
+          <button class="linkbtn" type="button" id="use-demo-maid">Fill it in</button>
+        </div>
+      </form>
+
+      <form id="form-signup" class="stack" novalidate hidden>
+        <h2 id="su-title">Create your account</h2>
+        <div class="plans roles" id="roles" role="radiogroup" aria-label="Register as">
+          <button type="button" class="plan" role="radio" data-role="user" aria-checked="true"><span class="pn">Register as user</span><span class="pu">I want to book a househelp</span></button>
+          <button type="button" class="plan" role="radio" data-role="maid" aria-checked="false"><span class="pn">Register as househelp</span><span class="pu">I want to work as a househelp</span></button>
+        </div>
+        <div class="field">
+          <label for="su-name">Full name</label>
+          <input class="input" id="su-name" name="name" autocomplete="name" placeholder="Asha Verma">
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="su-phone">Mobile number</label>
+            <input class="input" id="su-phone" name="phone" inputmode="numeric" autocomplete="tel-national" placeholder="10 digits">
+          </div>
+          <div class="field">
+            <label for="su-email">Email</label>
+            <input class="input" id="su-email" name="email" type="email" autocomplete="email" placeholder="you@example.com">
+          </div>
+        </div>
+        <div class="field">
+          <label for="su-pw">Password</label>
+          <input class="input" id="su-pw" name="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+        </div>
+        <div id="maid-fields" class="stack" hidden>
+          <div class="field">
+            <span class="fl" id="ms-label">Chores you do</span>
+            <div class="chips" id="m-services" role="group" aria-labelledby="ms-label"></div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label for="m-exp">Experience</label>
+              <select class="input" id="m-exp">
+                <option>Less than 1 year</option><option>1 to 3 years</option><option>3 to 5 years</option><option>5+ years</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="m-area">Area you can work in</label>
+              <input class="input" id="m-area" placeholder="Dwarka, Delhi">
+            </div>
+          </div>
+        </div>
+        <p class="err" id="su-err" role="alert"></p>
+        <button class="btn" type="submit" id="su-btn">Create user account</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ======== Signed-in app ======== -->
+  <section id="app" aria-label="Househelp booking" hidden>
+    <div class="topbar">
+      <div class="logo">
+        <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></span>
+        Ghar Saathi
+      </div>
+      <div class="who"><span>Signed in as <strong id="who-name"></strong></span><button class="btn ghost small" type="button" id="signout">Sign out</button></div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tab-order" aria-selected="true" data-tab="order">Order a househelp</button>
+      <button type="button" role="tab" id="tab-bookings" aria-selected="false" data-tab="bookings">My bookings <span class="mono" id="bk-count"></span></button>
+      <button type="button" role="tab" id="tab-requests" aria-selected="false" data-tab="requests" hidden>Open requests <span class="mono" id="rq-count"></span></button>
+      <button type="button" role="tab" id="tab-jobs" aria-selected="false" data-tab="jobs" hidden>My jobs <span class="mono" id="jb-count"></span></button>
+    </div>
+
+    <div id="view-order">
+      <div class="page-title" style="margin-bottom:24px">
+        <h2>Order a househelp</h2>
+        <p>Choose the chores, how long you want the help for, and when it should start.</p>
+      </div>
+      <div class="order">
+        <div class="steps">
+          <div class="step">
+            <div class="step-head"><h3>1. Your home</h3><p>Prices change with the size of your home.</p></div>
+            <div class="plans sizes" id="sizes" role="radiogroup" aria-label="Home size"></div>
+          </div>
+
+          <div class="step">
+            <div class="step-head"><h3>2. What needs doing</h3><p>Pick one or more. Prices are per visit for your home size.</p></div>
+            <div class="services" id="services"></div>
+          </div>
+
+          <div class="step">
+            <div class="step-head"><h3>3. How long do you need help</h3><p>Longer plans cost less per visit.</p></div>
+            <div class="plans" id="plans" role="radiogroup" aria-label="Duration"></div>
+          </div>
+
+          <div class="step" id="days-step">
+            <div class="step-head"><h3>4. Which days</h3><p id="days-sub">Pick the days the helper should come each week.</p></div>
+            <div class="days" id="days"></div>
+          </div>
+
+          <div class="step">
+            <div class="step-head"><h3 id="when-title">4. When</h3><p id="when-sub"></p></div>
+            <div class="grid2">
+              <div class="field">
+                <label for="o-date" id="date-label">Start date</label>
+                <input class="input" type="date" id="o-date">
+              </div>
+            </div>
+            <div class="slots" id="slots" role="group" aria-label="Arrival time"></div>
+            <p class="hints" id="time-note"></p>
+          </div>
+
+          <div class="step">
+            <div class="step-head"><h3 id="where-title">6. Where</h3><p>The helper will come to this address.</p></div>
+            <div class="field">
+              <label for="o-addr">Address</label>
+              <textarea class="input" id="o-addr" rows="2" placeholder="Flat or house number, building, area, city"></textarea>
+            </div>
+            <div class="field">
+              <label for="o-notes">Notes for the helper (optional)</label>
+              <input class="input" id="o-notes" placeholder="Gate code, pets at home, anything to know">
+            </div>
+          </div>
+        </div>
+
+        <aside class="summary" aria-label="Order summary">
+          <h3>Your order</h3>
+          <div class="sum-lines" id="sum-lines"></div>
+          <div class="total"><span class="label" id="total-label">Total</span><span class="big mono" id="total-amt"></span><span class="sub" id="total-sub"></span></div>
+          <p class="hints" id="hints"></p>
+          <button class="btn" type="button" id="place">Place order</button>
+        </aside>
+      </div>
+    </div>
+
+    <div id="view-bookings" hidden>
+      <div class="page-title" style="margin-bottom:20px">
+        <h2>My bookings</h2>
+        <p>Orders you have placed from this browser.</p>
+      </div>
+      <div class="bookings" id="bookings"></div>
+    </div>
+
+    <div id="view-requests" hidden>
+      <div class="page-title" style="margin-bottom:20px">
+        <h2>Open requests</h2>
+        <p>Households that need help with chores you do. Accept a job to take it.</p>
+      </div>
+      <div class="bookings" id="requests"></div>
+    </div>
+
+    <div id="view-jobs" hidden>
+      <div class="page-title" style="margin-bottom:20px">
+        <h2>My jobs</h2>
+        <p>Jobs you have accepted.</p>
+      </div>
+      <div class="bookings" id="jobs"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  var SERVICES = [
+    { id: 'sweep', name: 'Sweeping and mopping', desc: 'Floors, balcony and entrance', prices: { 1: 200, 2: 300, 3: 400 } },
+    { id: 'utensils', name: 'Utensils', desc: 'Wash and rack the day’s utensils', prices: { 1: 120, 2: 150, 3: 180 } },
+    { id: 'cook', name: 'Cooking', desc: 'Two meals a visit', prices: { 1: 300, 2: 350, 3: 400 } },
+    { id: 'laundry', name: 'Laundry', desc: 'Wash, dry and fold', prices: { 1: 180, 2: 200, 3: 250 } },
+    { id: 'bath', name: 'Bathroom cleaning', desc: 'Every bathroom in the home', prices: { 1: 200, 2: 350, 3: 450 } },
+    { id: 'care', name: 'Child or elder care', desc: 'Four hours at home', prices: { 1: 500, 2: 500, 3: 500 } }
+  ];
+  var SIZES = [
+    { id: '1', name: '1 BHK', desc: '1 bedroom, hall, kitchen' },
+    { id: '2', name: '2 BHK', desc: '2 bedrooms, hall, kitchen' },
+    { id: '3', name: '3 BHK', desc: '3 bedrooms, hall, kitchen' }
+  ];
+  var PLANS = {
+    once:    { name: 'One-Time', unit: 'single visit', off: 0,  note: 'One visit, no commitment' },
+    weekly:  { name: 'Weekly',   unit: 'per week',     off: 5,  note: 'Billed every week' },
+    monthly: { name: 'Monthly',  unit: 'per month',    off: 12, note: 'Billed every month' },
+    yearly:  { name: 'Yearly',   unit: 'per year',     off: 20, note: 'Billed once a year' }
+  };
+  // Minutes the helper spends per chore, by home size (1, 2, 3 BHK)
+  var MINS = {
+    sweep: { 1: 45, 2: 60, 3: 90 }, utensils: { 1: 20, 2: 30, 3: 40 }, cook: { 1: 60, 2: 75, 3: 90 },
+    laundry: { 1: 30, 2: 40, 3: 50 }, bath: { 1: 30, 2: 45, 3: 60 }, care: { 1: 240, 2: 240, 3: 240 }
+  };
+  // Start times every half hour, 6:00 am to 8:00 pm, in minutes from midnight
+  var STARTS = [];
+  for (var m = 6 * 60; m <= 20 * 60; m += 30) STARTS.push(m);
+  function clock(mins) {
+    var h = Math.floor(mins / 60) % 24, mm = mins % 60, ap = h >= 12 ? 'pm' : 'am';
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + String(mm).padStart(2, '0') + ' ' + ap;
+  }
+  function durLabel(mins) {
+    var h = Math.floor(mins / 60), mm = mins % 60;
+    return (h ? h + ' hr' : '') + (h && mm ? ' ' : '') + (mm ? mm + ' min' : '');
+  }
+  var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var DEMO = { name: 'Demo User', phone: '9810012345', email: 'demo@gharsaathi.in', pw: 'demo123', role: 'user' };
+  var DEMO_MAID = { name: 'Sunita Devi', phone: '9810055555', email: 'helper@gharsaathi.in', pw: 'demo123', role: 'maid',
+    services: ['sweep', 'utensils', 'cook', 'laundry', 'bath'], exp: '5+ years', area: 'Dwarka, Delhi' };
+
+  var inr = new Intl.NumberFormat('en-IN');
+  function money(n) { return '₹' + inr.format(Math.round(n)); }
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- storage (per-viewer convenience, optional) ----------
+  function load(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+  var users = load('gs_users', []);
+  [DEMO, DEMO_MAID].forEach(function (d) {
+    if (!users.some(function (u) { return u.email === d.email; })) users.push(d);
+  });
+  var bookings = load('gs_bookings', {});
+  var session = load('gs_session', null);
+
+  // ---------- helpers ----------
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function niceDate(s) {
+    if (!s) return '';
+    var p = s.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function setErr(el, msg, inputs) {
+    el.textContent = msg || '';
+    (inputs || []).forEach(function (i) { i.setAttribute('aria-invalid', msg ? 'true' : 'false'); });
+  }
+
+  // ---------- auth ----------
+  function showAuth(which) {
+    var signin = which === 'signin';
+    $('tab-signin').setAttribute('aria-selected', signin);
+    $('tab-signup').setAttribute('aria-selected', !signin);
+    $('form-signin').hidden = !signin;
+    $('form-signup').hidden = signin;
+  }
+  document.querySelectorAll('[data-auth]').forEach(function (b) {
+    b.addEventListener('click', function () { showAuth(b.dataset.auth); });
+  });
+  $('use-demo').addEventListener('click', function () {
+    $('si-id').value = DEMO.email; $('si-pw').value = DEMO.pw; $('si-id').focus();
+  });
+  $('use-demo-maid').addEventListener('click', function () {
+    $('si-id').value = DEMO_MAID.email; $('si-pw').value = DEMO_MAID.pw; $('si-id').focus();
+  });
+
+  // register as user or maid
+  var signupRole = 'user', mServices = [];
+  function renderRole() {
+    var maid = signupRole === 'maid';
+    document.querySelectorAll('#roles [data-role]').forEach(function (b) {
+      b.setAttribute('aria-checked', b.dataset.role === signupRole);
+    });
+    $('maid-fields').hidden = !maid;
+    $('su-title').textContent = maid ? 'Register as a househelp' : 'Register as a user';
+    $('su-btn').textContent = maid ? 'Create househelp account' : 'Create user account';
+    $('m-services').innerHTML = SERVICES.map(function (s) {
+      return '<button type="button" class="chip" data-ms="' + s.id + '" aria-pressed="' + (mServices.indexOf(s.id) > -1) + '">' + s.name + '</button>';
+    }).join('');
+  }
+  $('roles').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-role]'); if (!b) return;
+    signupRole = b.dataset.role; renderRole();
+  });
+  $('m-services').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-ms]'); if (!b) return;
+    var i = mServices.indexOf(b.dataset.ms);
+    if (i > -1) mServices.splice(i, 1); else mServices.push(b.dataset.ms);
+    renderRole();
+  });
+  renderRole();
+
+  $('form-signin').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var id = $('si-id').value.trim().toLowerCase(), pw = $('si-pw').value;
+    var inputs = [$('si-id'), $('si-pw')];
+    if (!id || !pw) return setErr($('si-err'), 'Enter your email or mobile number and your password.', inputs);
+    var user = users.find(function (u) { return u.email.toLowerCase() === id || u.phone === id.replace(/\s+/g, ''); });
+    if (!user) return setErr($('si-err'), 'No account matches that email or number. Create an account first.', inputs);
+    if (user.pw !== pw) return setErr($('si-err'), 'That password is not right. Check it and try again.', inputs);
+    setErr($('si-err'), '', inputs);
+    startSession(user);
+  });
+
+  $('form-signup').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('su-name').value.trim(), phone = $('su-phone').value.replace(/\s+/g, ''),
+        email = $('su-email').value.trim(), pw = $('su-pw').value;
+    var inputs = [$('su-name'), $('su-phone'), $('su-email'), $('su-pw')];
+    var msg = '';
+    if (name.length < 2) msg = 'Enter your full name.';
+    else if (!/^[6-9]\d{9}$/.test(phone)) msg = 'Enter a 10-digit Indian mobile number.';
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) msg = 'Enter a valid email address.';
+    else if (pw.length < 6) msg = 'Use a password with at least 6 characters.';
+    else if (users.some(function (u) { return u.email.toLowerCase() === email.toLowerCase() || u.phone === phone; }))
+      msg = 'An account with that email or number already exists. Sign in instead.';
+    else if (signupRole === 'maid' && !mServices.length) msg = 'Pick at least one chore you do.';
+    else if (signupRole === 'maid' && $('m-area').value.trim().length < 2) msg = 'Enter the area you can work in.';
+    setErr($('su-err'), msg, inputs);
+    if (msg) return;
+    var user = { name: name, phone: phone, email: email, pw: pw, role: signupRole };
+    if (signupRole === 'maid') { user.services = mServices.slice(); user.exp = $('m-exp').value; user.area = $('m-area').value.trim(); }
+    users.push(user); save('gs_users', users);
+    startSession(user);
+  });
+
+  function startSession(user) {
+    session = { email: user.email, name: user.name, role: user.role || 'user' };
+    save('gs_session', session);
+    renderShell();
+    toast('Signed in. Welcome, ' + user.name.split(' ')[0] + '.');
+  }
+  $('signout').addEventListener('click', function () {
+    session = null; save('gs_session', null);
+    $('si-pw').value = '';
+    renderShell(); showAuth('signin');
+  });
+
+  function renderShell() {
+    var inApp = !!session;
+    $('auth').hidden = inApp;
+    $('app').hidden = !inApp;
+    if (inApp) {
+      var maid = session.role === 'maid';
+      $('who-name').textContent = session.name + (maid ? ' (househelp)' : '');
+      ['order', 'bookings'].forEach(function (t) { $('tab-' + t).hidden = maid; });
+      ['requests', 'jobs'].forEach(function (t) { $('tab-' + t).hidden = !maid; });
+      switchTab(maid ? 'requests' : 'order');
+      if (maid) renderMaid(); else { renderOrder(); renderBookings(); }
+    }
+  }
+
+  // ---------- tabs ----------
+  function switchTab(which) {
+    ['order', 'bookings', 'requests', 'jobs'].forEach(function (t) {
+      $('tab-' + t).setAttribute('aria-selected', t === which);
+      $('view-' + t).hidden = t !== which;
+    });
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('[data-tab]').forEach(function (b) {
+    b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+  });
+
+  // ---------- order state ----------
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  var order = { size: '2', services: ['sweep', 'utensils'], plan: 'weekly', days: ['Mon', 'Wed', 'Fri'], date: iso(tomorrow), start: 7 * 60 };
+
+  function visitMins() {
+    return order.services.reduce(function (a, id) { return a + MINS[id][order.size]; }, 0);
+  }
+  function timeText() {
+    var d = visitMins();
+    return d ? clock(order.start) + ' to ' + clock(order.start + d) : clock(order.start);
+  }
+
+  function perVisit() {
+    return SERVICES.filter(function (s) { return order.services.indexOf(s.id) > -1; })
+      .reduce(function (a, s) { return a + s.prices[order.size]; }, 0);
+  }
+  function priceFor(plan, visit, nDays) {
+    var gross = visit * Math.max(nDays, 1);
+    if (plan === 'once') return { amount: visit, unit: 'one visit' };
+    if (plan === 'weekly') return { amount: gross * 0.95, unit: 'per week' };
+    if (plan === 'monthly') return { amount: gross * 52 / 12 * 0.88, unit: 'per month' };
+    return { amount: gross * 52 * 0.80, unit: 'per year', monthly: gross * 52 * 0.80 / 12 };
+  }
+
+  function renderOrder() {
+    // home size
+    $('sizes').innerHTML = SIZES.map(function (z) {
+      return '<button type="button" class="plan size" role="radio" data-size="' + z.id + '" aria-checked="' + (order.size === z.id) + '">' +
+        '<span class="pn">' + z.name + '</span><span class="pu">' + z.desc + '</span></button>';
+    }).join('');
+
+    // services
+    $('services').innerHTML = SERVICES.map(function (s) {
+      var on = order.services.indexOf(s.id) > -1;
+      return '<button type="button" class="svc" data-svc="' + s.id + '" aria-pressed="' + on + '">' +
+        '<span class="nm"><span>' + s.name + '</span><span class="tick" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5 5 9l4.5-6"/></svg></span></span>' +
+        '<span class="ds">' + s.desc + '</span><span class="pr mono">' + money(s.prices[order.size]) + ' / visit</span></button>';
+    }).join('');
+
+    // plans
+    var visit = perVisit();
+    $('plans').innerHTML = Object.keys(PLANS).map(function (k) {
+      var p = PLANS[k], pr = priceFor(k, visit, order.days.length);
+      var amount = visit ? money(pr.amount) : '–';
+      var extra = (k === 'yearly' && visit) ? '<span class="pd mono">about ' + money(pr.monthly) + ' a month</span>' : '<span class="pd">' + p.note + '</span>';
+      return '<button type="button" class="plan" role="radio" data-plan="' + k + '" aria-checked="' + (order.plan === k) + '">' +
+        (p.off ? '<span class="badge">Save ' + p.off + '%</span>' : '<span class="badge none">Save</span>') +
+        '<span class="pn">' + p.name + '</span><span class="pp mono">' + amount + '</span>' +
+        '<span class="pu">' + pr.unit + '</span>' + extra + '</button>';
+    }).join('');
+
+    // days
+    var recurring = order.plan !== 'once';
+    $('days-step').hidden = !recurring;
+    $('days').innerHTML = DAYS.map(function (d) {
+      return '<button type="button" class="day" data-day="' + d + '" aria-pressed="' + (order.days.indexOf(d) > -1) + '">' + d + '</button>';
+    }).join('');
+    $('days-sub').textContent = order.days.length
+      ? order.days.length + (order.days.length === 1 ? ' visit' : ' visits') + ' a week.'
+      : 'Pick at least one day.';
+
+    // when
+    $('when-title').textContent = (recurring ? '5' : '4') + '. When';
+    $('where-title').textContent = (recurring ? '6' : '5') + '. Where';
+    $('when-sub').textContent = recurring ? 'Choose the start date and the exact time the helper arrives. It repeats on your days.' : 'Choose the date and the exact time the helper arrives.';
+    $('date-label').textContent = recurring ? 'Start date' : 'Visit date';
+    $('o-date').min = iso(new Date());
+    if ($('o-date').value !== order.date) $('o-date').value = order.date;
+    $('slots').innerHTML = STARTS.map(function (t) {
+      return '<button type="button" class="slot mono" data-start="' + t + '" aria-pressed="' + (order.start === t) + '">' + clock(t) + '</button>';
+    }).join('');
+    var dm = visitMins();
+    $('time-note').textContent = dm
+      ? 'Each visit takes about ' + durLabel(dm) + ': ' + timeText() + '.'
+      : 'Pick a chore to see how long each visit takes.';
+
+    renderSummary();
+  }
+
+  function missing() {
+    var m = [];
+    if (!order.services.length) m.push('Pick at least one chore.');
+    if (order.plan !== 'once' && !order.days.length) m.push('Pick at least one day.');
+    if (!order.date || order.date < iso(new Date())) m.push('Choose a date from today onward.');
+    if (!$('o-addr').value.trim()) m.push('Add your address.');
+    return m;
+  }
+
+  function summaryData() {
+    var visit = perVisit(), p = PLANS[order.plan], pr = priceFor(order.plan, visit, order.days.length);
+    var names = SERVICES.filter(function (s) { return order.services.indexOf(s.id) > -1; }).map(function (s) { return s.name; });
+    return { visit: visit, plan: p, pr: pr, names: names, time: timeText() };
+  }
+
+  function renderSummary() {
+    var d = summaryData(), recurring = order.plan !== 'once';
+    var lines = [
+      ['Home', order.size + ' BHK'],
+      ['Chores', d.names.length ? d.names.join(', ') : 'None yet'],
+      ['Per visit', d.visit ? money(d.visit) : '–'],
+      ['Duration', d.plan.name],
+    ];
+    if (recurring) lines.push(['Days', order.days.length ? order.days.join(', ') : 'None yet']);
+    lines.push([recurring ? 'Starts' : 'Date', niceDate(order.date)]);
+    lines.push(['Time', d.time]);
+    if (visitMins()) lines.push(['Each visit', durLabel(visitMins())]);
+    if (d.plan.off) lines.push(['Plan discount', d.plan.off + '% off']);
+    $('sum-lines').innerHTML = lines.map(function (l) {
+      return '<div class="sum-line"><span>' + l[0] + '</span><span></span></div>';
+    }).join('');
+    var spans = $('sum-lines').querySelectorAll('.sum-line span:last-child');
+    lines.forEach(function (l, i) { spans[i].textContent = l[1]; });
+
+    $('total-label').textContent = order.plan === 'once' ? 'Total' : 'You pay ' + d.pr.unit;
+    $('total-amt').textContent = d.visit && (order.plan === 'once' || order.days.length) ? money(d.pr.amount) : '–';
+    $('total-sub').textContent = order.plan === 'yearly' && d.visit && order.days.length ? 'About ' + money(d.pr.monthly) + ' a month, charged once a year.' : d.plan.note + '.';
+    var m = missing();
+    $('hints').textContent = m.join(' ');
+    $('place').disabled = m.length > 0;
+  }
+
+  // ---------- order events ----------
+  $('sizes').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-size]'); if (!b) return;
+    order.size = b.dataset.size; renderOrder();
+  });
+  $('services').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-svc]'); if (!b) return;
+    var id = b.dataset.svc, i = order.services.indexOf(id);
+    if (i > -1) order.services.splice(i, 1); else order.services.push(id);
+    renderOrder();
+  });
+  $('plans').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-plan]'); if (!b) return;
+    order.plan = b.dataset.plan; renderOrder();
+  });
+  $('days').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-day]'); if (!b) return;
+    var d = b.dataset.day, i = order.days.indexOf(d);
+    if (i > -1) order.days.splice(i, 1); else order.days.push(d);
+    order.days.sort(function (a, c) { return DAYS.indexOf(a) - DAYS.indexOf(c); });
+    renderOrder();
+  });
+  $('slots').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-start]'); if (!b) return;
+    order.start = +b.dataset.start; renderOrder();
+  });
+  $('o-date').addEventListener('change', function () { order.date = this.value; renderSummary(); });
+  $('o-addr').addEventListener('input', renderSummary);
+
+  $('place').addEventListener('click', function () {
+    if (missing().length) return;
+    var d = summaryData();
+    var list = bookings[session.email] || [];
+    list.unshift({
+      id: 'GS' + String(Date.now()).slice(-6), size: order.size,
+      owner: session.email, customer: session.name, svcIds: order.services.slice(), maid: null,
+      names: d.names, plan: order.plan, days: order.plan === 'once' ? [] : order.days.slice(),
+      date: order.date, slot: d.time, address: $('o-addr').value.trim(), notes: $('o-notes').value.trim(),
+      amount: d.pr.amount, unit: d.pr.unit
+    });
+    bookings[session.email] = list; save('gs_bookings', bookings);
+    $('o-addr').value = ''; $('o-notes').value = '';
+    renderBookings(); renderOrder();
+    switchTab('bookings');
+    toast('Order placed. We are finding you a househelp.');
+  });
+
+  // ---------- maid side ----------
+  function meMaid() { return users.find(function (u) { return u.email === session.email; }) || {}; }
+  function allJobs() {
+    var out = [];
+    Object.keys(bookings).forEach(function (k) { (bookings[k] || []).forEach(function (b) { out.push(b); }); });
+    return out;
+  }
+  function jobCard(b, label, onClick, showCustomer) {
+    var el = document.createElement('div'); el.className = 'bk';
+    var left = document.createElement('div');
+    var h = document.createElement('h3');
+    h.appendChild(document.createTextNode(PLANS[b.plan].name + (b.size ? ', ' + b.size + ' BHK' : '')));
+    var meta = document.createElement('div'); meta.className = 'meta';
+    [
+      b.names.join(', '),
+      (b.days.length ? b.days.join(', ') + ' from ' : '') + niceDate(b.date) + ', ' + b.slot,
+      b.address,
+      showCustomer && b.customer ? 'Customer: ' + b.customer : '',
+      b.notes ? 'Note: ' + b.notes : ''
+    ].filter(Boolean).forEach(function (t) { var s = document.createElement('span'); s.textContent = t; meta.appendChild(s); });
+    left.appendChild(h); left.appendChild(meta);
+    var right = document.createElement('div'); right.className = 'amt';
+    var big = document.createElement('span'); big.className = 'big mono'; big.textContent = money(b.amount);
+    var unit = document.createElement('span'); unit.className = 'label'; unit.textContent = b.unit;
+    var priceBox = document.createElement('div'); priceBox.appendChild(big); priceBox.appendChild(document.createElement('br')); priceBox.appendChild(unit);
+    var btn = document.createElement('button'); btn.type = 'button';
+    btn.className = label === 'Accept job' ? 'btn small' : 'btn ghost small';
+    btn.textContent = label; btn.addEventListener('click', onClick);
+    right.appendChild(priceBox); right.appendChild(btn);
+    el.appendChild(left); el.appendChild(right);
+    return el;
+  }
+  function renderMaid() {
+    var me = meMaid(), mine = me.services || [];
+    var jobs = allJobs();
+    var open = jobs.filter(function (b) {
+      return !b.maid && b.svcIds && b.svcIds.every(function (id) { return mine.indexOf(id) > -1; });
+    });
+    var taken = jobs.filter(function (b) { return b.maid && b.maid.email === session.email; });
+    $('rq-count').textContent = open.length ? '(' + open.length + ')' : '';
+    $('jb-count').textContent = taken.length ? '(' + taken.length + ')' : '';
+
+    var rq = $('requests'); rq.innerHTML = '';
+    if (!open.length) {
+      rq.innerHTML = '<div class="empty"><p>No open requests for your chores right now. Requests placed from this browser show up here.</p></div>';
+    }
+    open.forEach(function (b) {
+      rq.appendChild(jobCard(b, 'Accept job', function () {
+        b.maid = { email: session.email, name: session.name };
+        save('gs_bookings', bookings); renderMaid(); toast('Job accepted. It is now under My jobs.');
+      }, false));
+    });
+
+    var jb = $('jobs'); jb.innerHTML = '';
+    if (!taken.length) {
+      jb.innerHTML = '<div class="empty"><p>You have not accepted any jobs yet.</p></div>';
+    }
+    taken.forEach(function (b) {
+      jb.appendChild(jobCard(b, 'Drop job', function () {
+        b.maid = null; save('gs_bookings', bookings); renderMaid(); toast('Job dropped. It is open again.');
+      }, true));
+    });
+  }
+
+  // ---------- bookings ----------
+  var pendingCancel = null;
+  function renderBookings() {
+    var list = (session && bookings[session.email]) || [];
+    $('bk-count').textContent = list.length ? '(' + list.length + ')' : '';
+    var box = $('bookings');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty"><p>You have no bookings yet.</p><button class="btn" type="button" id="go-order">Order a househelp</button></div>';
+      $('go-order').addEventListener('click', function () { switchTab('order'); });
+      return;
+    }
+    box.innerHTML = '';
+    list.forEach(function (b) {
+      var el = document.createElement('div'); el.className = 'bk';
+      var left = document.createElement('div');
+      var h = document.createElement('h3');
+      h.appendChild(document.createTextNode(PLANS[b.plan].name + ' booking'));
+      var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = b.maid ? 'Accepted by ' + b.maid.name : 'Finding a househelp'; h.appendChild(pill);
+      var meta = document.createElement('div'); meta.className = 'meta';
+      [
+        (b.size ? b.size + ' BHK: ' : '') + b.names.join(', '),
+        (b.days.length ? b.days.join(', ') + ' from ' : '') + niceDate(b.date) + ', ' + b.slot,
+        b.address,
+        b.notes ? 'Note: ' + b.notes : ''
+      ].filter(Boolean).forEach(function (t) { var s = document.createElement('span'); s.textContent = t; meta.appendChild(s); });
+      var ref = document.createElement('span'); ref.className = 'mono'; ref.style.fontSize = '12px'; ref.textContent = 'Ref ' + b.id; meta.appendChild(ref);
+      left.appendChild(h); left.appendChild(meta);
+
+      var right = document.createElement('div'); right.className = 'amt';
+      var big = document.createElement('span'); big.className = 'big mono'; big.textContent = money(b.amount);
+      var unit = document.createElement('span'); unit.className = 'label'; unit.textContent = b.unit;
+      var priceBox = document.createElement('div'); priceBox.appendChild(big); priceBox.appendChild(document.createElement('br')); priceBox.appendChild(unit);
+      var cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn ghost small';
+      cancel.textContent = pendingCancel === b.id ? 'Tap again to cancel' : 'Cancel booking';
+      cancel.addEventListener('click', function () {
+        if (pendingCancel !== b.id) { pendingCancel = b.id; renderBookings(); return; }
+        bookings[session.email] = list.filter(function (x) { return x.id !== b.id; });
+        save('gs_bookings', bookings); pendingCancel = null; renderBookings(); toast('Booking cancelled.');
+      });
+      right.appendChild(priceBox); right.appendChild(cancel);
+      el.appendChild(left); el.appendChild(right); box.appendChild(el);
+    });
+  }
+
+  // ---------- boot ----------
+  if (session) {
+    var known = users.find(function (u) { return u.email === session.email; });
+    if (known) session.role = known.role || 'user'; else session = null;
+  }
+  renderShell();
+  if (!session) showAuth('signin');
+})();
+</script>
+
+</body></html>
