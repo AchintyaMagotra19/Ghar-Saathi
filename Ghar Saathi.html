@@ -424,24 +424,54 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     return (h ? h + ' hr' : '') + (h && mm ? ' ' : '') + (mm ? mm + ' min' : '');
   }
   var DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  var DEMO = { name: 'Demo User', phone: '9810012345', email: 'demo@gharsaathi.in', pw: 'demo123', role: 'user' };
-  var DEMO_MAID = { name: 'Sunita Devi', phone: '9810055555', email: 'helper@gharsaathi.in', pw: 'demo123', role: 'maid',
-    services: ['sweep', 'utensils', 'cook', 'laundry', 'bath'], exp: '5+ years', area: 'Dwarka, Delhi' };
+  // Demo accounts are created by the API on startup
+  var DEMO = { email: 'demo@gharsaathi.in', pw: 'demo123' };
+  var DEMO_MAID = { email: 'helper@gharsaathi.in', pw: 'demo123' };
 
   var inr = new Intl.NumberFormat('en-IN');
   function money(n) { return '₹' + inr.format(Math.round(n)); }
   function $(id) { return document.getElementById(id); }
 
-  // ---------- storage (per-viewer convenience, optional) ----------
-  function load(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
-  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+  // ---------- API ----------
+  // The API serves this page, so requests go to the same address. Opened as a file, fall back to the local API.
+  var API = location.protocol === 'file:' ? 'http://localhost:8000' : '';
+  var TOKEN_KEY = 'gs_token';
+  function loadToken() { try { return localStorage.getItem(TOKEN_KEY); } catch (e) { return null; } }
+  function saveToken(t) { try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
 
-  var users = load('gs_users', []);
-  [DEMO, DEMO_MAID].forEach(function (d) {
-    if (!users.some(function (u) { return u.email === d.email; })) users.push(d);
-  });
-  var bookings = load('gs_bookings', {});
-  var session = load('gs_session', null);
+  var token = loadToken();
+  var session = null; // { name, email, role: 'user' | 'maid' }
+  var bookings = [], openJobs = [], myJobs = [];
+
+  function api(method, path, body) {
+    var headers = {};
+    if (body) headers['Content-Type'] = 'application/json';
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(API + path, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined })
+      .catch(function () { throw new Error('Cannot reach the server. Check that the API is running.'); })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (res.ok) return data;
+          if (res.status === 401 && token) endSession();
+          var d = data.detail, msg = typeof d === 'string' ? d
+            : Array.isArray(d) && d.length ? String(d[0].msg).replace(/^Value error, /, '') : 'Something went wrong. Try again.';
+          throw new Error(msg);
+        });
+      });
+  }
+  function toSession(u) {
+    return { name: u.name, email: u.email, role: u.role === 'househelp' ? 'maid' : 'user' };
+  }
+  // Reshape an API order into what the cards below render
+  function fromApi(o) {
+    return {
+      id: o.id, ref: o.ref, size: o.size, svcIds: o.services, plan: o.plan, days: o.days, date: o.start_date,
+      names: SERVICES.filter(function (s) { return o.services.indexOf(s.id) > -1; }).map(function (s) { return s.name; }),
+      slot: clock(o.start_minute) + ' to ' + clock(o.start_minute + o.duration_minutes),
+      address: o.address, notes: o.notes, amount: o.amount_inr, unit: o.price_unit, status: o.status,
+      maid: o.helper, customer: o.customer ? o.customer.name + ', ' + o.customer.phone : null
+    };
+  }
 
   // ---------- helpers ----------
   var toastTimer;
@@ -509,11 +539,11 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     var id = $('si-id').value.trim().toLowerCase(), pw = $('si-pw').value;
     var inputs = [$('si-id'), $('si-pw')];
     if (!id || !pw) return setErr($('si-err'), 'Enter your email or mobile number and your password.', inputs);
-    var user = users.find(function (u) { return u.email.toLowerCase() === id || u.phone === id.replace(/\s+/g, ''); });
-    if (!user) return setErr($('si-err'), 'No account matches that email or number. Create an account first.', inputs);
-    if (user.pw !== pw) return setErr($('si-err'), 'That password is not right. Check it and try again.', inputs);
-    setErr($('si-err'), '', inputs);
-    startSession(user);
+    var btn = this.querySelector('[type=submit]'); btn.disabled = true;
+    api('POST', '/auth/login', { identifier: id, password: pw })
+      .then(function (r) { setErr($('si-err'), '', inputs); startSession(r); })
+      .catch(function (err) { setErr($('si-err'), err.message, inputs); })
+      .then(function () { btn.disabled = false; });
   });
 
   $('form-signup').addEventListener('submit', function (e) {
@@ -526,29 +556,32 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     else if (!/^[6-9]\d{9}$/.test(phone)) msg = 'Enter a 10-digit Indian mobile number.';
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) msg = 'Enter a valid email address.';
     else if (pw.length < 6) msg = 'Use a password with at least 6 characters.';
-    else if (users.some(function (u) { return u.email.toLowerCase() === email.toLowerCase() || u.phone === phone; }))
-      msg = 'An account with that email or number already exists. Sign in instead.';
     else if (signupRole === 'maid' && !mServices.length) msg = 'Pick at least one chore you do.';
     else if (signupRole === 'maid' && $('m-area').value.trim().length < 2) msg = 'Enter the area you can work in.';
     setErr($('su-err'), msg, inputs);
     if (msg) return;
-    var user = { name: name, phone: phone, email: email, pw: pw, role: signupRole };
-    if (signupRole === 'maid') { user.services = mServices.slice(); user.exp = $('m-exp').value; user.area = $('m-area').value.trim(); }
-    users.push(user); save('gs_users', users);
-    startSession(user);
+    var body = { role: signupRole === 'maid' ? 'househelp' : 'user', name: name, phone: phone, email: email, password: pw };
+    if (signupRole === 'maid') { body.services = mServices.slice(); body.experience = $('m-exp').value; body.area = $('m-area').value.trim(); }
+    var btn = $('su-btn'); btn.disabled = true;
+    api('POST', '/auth/register', body)
+      .then(startSession)
+      .catch(function (err) { setErr($('su-err'), err.message, inputs); })
+      .then(function () { btn.disabled = false; });
   });
 
-  function startSession(user) {
-    session = { email: user.email, name: user.name, role: user.role || 'user' };
-    save('gs_session', session);
+  function startSession(r) {
+    token = r.token; saveToken(token);
+    session = toSession(r.user);
     renderShell();
-    toast('Signed in. Welcome, ' + user.name.split(' ')[0] + '.');
+    toast('Signed in. Welcome, ' + session.name.split(' ')[0] + '.');
   }
-  $('signout').addEventListener('click', function () {
-    session = null; save('gs_session', null);
+  function endSession() {
+    token = null; saveToken(null);
+    session = null; bookings = []; openJobs = []; myJobs = [];
     $('si-pw').value = '';
     renderShell(); showAuth('signin');
-  });
+  }
+  $('signout').addEventListener('click', endSession);
 
   function renderShell() {
     var inApp = !!session;
@@ -560,7 +593,7 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
       ['order', 'bookings'].forEach(function (t) { $('tab-' + t).hidden = maid; });
       ['requests', 'jobs'].forEach(function (t) { $('tab-' + t).hidden = !maid; });
       switchTab(maid ? 'requests' : 'order');
-      if (maid) renderMaid(); else { renderOrder(); renderBookings(); }
+      if (maid) loadMaid(); else { renderOrder(); loadBookings(); }
     }
   }
 
@@ -573,7 +606,12 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     window.scrollTo(0, 0);
   }
   document.querySelectorAll('[data-tab]').forEach(function (b) {
-    b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+    b.addEventListener('click', function () {
+      switchTab(b.dataset.tab);
+      // Pick up changes made by other people since the last load
+      if (b.dataset.tab === 'bookings') loadBookings();
+      if (b.dataset.tab === 'requests' || b.dataset.tab === 'jobs') loadMaid();
+    });
   });
 
   // ---------- order state ----------
@@ -728,28 +766,30 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
 
   $('place').addEventListener('click', function () {
     if (missing().length) return;
-    var d = summaryData();
-    var list = bookings[session.email] || [];
-    list.unshift({
-      id: 'GS' + String(Date.now()).slice(-6), size: order.size,
-      owner: session.email, customer: session.name, svcIds: order.services.slice(), maid: null,
-      names: d.names, plan: order.plan, days: order.plan === 'once' ? [] : order.days.slice(),
-      date: order.date, slot: d.time, address: $('o-addr').value.trim(), notes: $('o-notes').value.trim(),
-      amount: d.pr.amount, unit: d.pr.unit
+    var btn = this; btn.disabled = true;
+    api('POST', '/orders', {
+      size: +order.size, services: order.services.slice(), plan: order.plan,
+      days: order.plan === 'once' ? [] : order.days.slice(), start_date: order.date, start_minute: order.start,
+      address: $('o-addr').value.trim(), notes: $('o-notes').value.trim()
+    }).then(function () {
+      $('o-addr').value = ''; $('o-notes').value = '';
+      renderOrder(); loadBookings();
+      switchTab('bookings');
+      toast('Order placed. We are finding you a househelp.');
+    }).catch(function (err) {
+      toast(err.message); renderSummary();
     });
-    bookings[session.email] = list; save('gs_bookings', bookings);
-    $('o-addr').value = ''; $('o-notes').value = '';
-    renderBookings(); renderOrder();
-    switchTab('bookings');
-    toast('Order placed. We are finding you a househelp.');
   });
 
   // ---------- maid side ----------
-  function meMaid() { return users.find(function (u) { return u.email === session.email; }) || {}; }
-  function allJobs() {
-    var out = [];
-    Object.keys(bookings).forEach(function (k) { (bookings[k] || []).forEach(function (b) { out.push(b); }); });
-    return out;
+  function loadMaid() {
+    if (!session || session.role !== 'maid') return;
+    Promise.all([api('GET', '/jobs/open'), api('GET', '/jobs/mine')]).then(function (r) {
+      openJobs = r[0].map(fromApi); myJobs = r[1].map(fromApi); renderMaid();
+    }).catch(function (err) { toast(err.message); });
+  }
+  function jobAction(path, okMsg) {
+    api('POST', path).then(function () { toast(okMsg); }).catch(function (err) { toast(err.message); }).then(loadMaid);
   }
   function jobCard(b, label, onClick, showCustomer) {
     var el = document.createElement('div'); el.className = 'bk';
@@ -777,23 +817,20 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     return el;
   }
   function renderMaid() {
-    var me = meMaid(), mine = me.services || [];
-    var jobs = allJobs();
-    var open = jobs.filter(function (b) {
-      return !b.maid && b.svcIds && b.svcIds.every(function (id) { return mine.indexOf(id) > -1; });
-    });
-    var taken = jobs.filter(function (b) { return b.maid && b.maid.email === session.email; });
+    // The API already returns only open jobs that match this househelp's chores
+    var open = openJobs;
+    var taken = myJobs.filter(function (b) { return b.status === 'accepted'; });
     $('rq-count').textContent = open.length ? '(' + open.length + ')' : '';
     $('jb-count').textContent = taken.length ? '(' + taken.length + ')' : '';
 
     var rq = $('requests'); rq.innerHTML = '';
     if (!open.length) {
-      rq.innerHTML = '<div class="empty"><p>No open requests for your chores right now. Requests placed from this browser show up here.</p></div>';
+      rq.innerHTML = '<div class="empty"><p>No open requests for your chores right now.</p></div>';
     }
     open.forEach(function (b) {
       rq.appendChild(jobCard(b, 'Accept job', function () {
-        b.maid = { email: session.email, name: session.name };
-        save('gs_bookings', bookings); renderMaid(); toast('Job accepted. It is now under My jobs.');
+        this.disabled = true;
+        jobAction('/jobs/' + b.id + '/accept', 'Job accepted. It is now under My jobs.');
       }, false));
     });
 
@@ -803,15 +840,23 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
     }
     taken.forEach(function (b) {
       jb.appendChild(jobCard(b, 'Drop job', function () {
-        b.maid = null; save('gs_bookings', bookings); renderMaid(); toast('Job dropped. It is open again.');
+        this.disabled = true;
+        jobAction('/jobs/' + b.id + '/drop', 'Job dropped. It is open again.');
       }, true));
     });
   }
 
   // ---------- bookings ----------
   var pendingCancel = null;
+  function loadBookings() {
+    if (!session || session.role !== 'user') return;
+    api('GET', '/orders').then(function (rows) {
+      bookings = rows.filter(function (o) { return o.status !== 'cancelled'; }).map(fromApi);
+      renderBookings();
+    }).catch(function (err) { toast(err.message); });
+  }
   function renderBookings() {
-    var list = (session && bookings[session.email]) || [];
+    var list = bookings;
     $('bk-count').textContent = list.length ? '(' + list.length + ')' : '';
     var box = $('bookings');
     if (!list.length) {
@@ -833,7 +878,7 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
         b.address,
         b.notes ? 'Note: ' + b.notes : ''
       ].filter(Boolean).forEach(function (t) { var s = document.createElement('span'); s.textContent = t; meta.appendChild(s); });
-      var ref = document.createElement('span'); ref.className = 'mono'; ref.style.fontSize = '12px'; ref.textContent = 'Ref ' + b.id; meta.appendChild(ref);
+      var ref = document.createElement('span'); ref.className = 'mono'; ref.style.fontSize = '12px'; ref.textContent = 'Ref ' + b.ref; meta.appendChild(ref);
       left.appendChild(h); left.appendChild(meta);
 
       var right = document.createElement('div'); right.className = 'amt';
@@ -844,8 +889,11 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
       cancel.textContent = pendingCancel === b.id ? 'Tap again to cancel' : 'Cancel booking';
       cancel.addEventListener('click', function () {
         if (pendingCancel !== b.id) { pendingCancel = b.id; renderBookings(); return; }
-        bookings[session.email] = list.filter(function (x) { return x.id !== b.id; });
-        save('gs_bookings', bookings); pendingCancel = null; renderBookings(); toast('Booking cancelled.');
+        pendingCancel = null; cancel.disabled = true;
+        api('DELETE', '/orders/' + b.id)
+          .then(function () { toast('Booking cancelled.'); })
+          .catch(function (err) { toast(err.message); })
+          .then(loadBookings);
       });
       right.appendChild(priceBox); right.appendChild(cancel);
       el.appendChild(left); el.appendChild(right); box.appendChild(el);
@@ -853,12 +901,15 @@ form.stack { display: flex; flex-direction: column; gap: 14px; }
   }
 
   // ---------- boot ----------
-  if (session) {
-    var known = users.find(function (u) { return u.email === session.email; });
-    if (known) session.role = known.role || 'user'; else session = null;
-  }
+  // Old builds kept accounts, bookings and passwords in this browser. Clear them out.
+  try { ['gs_users', 'gs_bookings', 'gs_session'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+
   renderShell();
-  if (!session) showAuth('signin');
+  showAuth('signin');
+  if (token) {
+    // Still signed in from last time if the saved pass is valid
+    api('GET', '/me').then(function (u) { session = toSession(u); renderShell(); }).catch(function () {});
+  }
 })();
 </script>
 
