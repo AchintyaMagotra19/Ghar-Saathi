@@ -1,26 +1,49 @@
 import os
 import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import pricing
-from .db import Base, engine, get_db
+from .db import Base, SessionLocal, engine, get_db
 from .models import Order, User
 from .schemas import (AuthOut, LoginIn, MyJobOut, OpenJobOut, OrderIn, OrderOut,
                       PersonOut, RegisterIn, UserOut)
 from .security import create_token, decode_token, hash_password, verify_password
 
 
+FRONTEND = Path(__file__).resolve().parents[2] / "Ghar Saathi.html"
+
+# Sign-in screen has "Fill it in" buttons for these. Set SEED_DEMO=0 to skip creating them.
+DEMO_ACCOUNTS = [
+    dict(role="user", name="Demo User", phone="9810012345", email="demo@gharsaathi.in"),
+    dict(role="househelp", name="Sunita Devi", phone="9810055555", email="helper@gharsaathi.in",
+         services="sweep,utensils,cook,laundry,bath", experience="5+ years", area="Dwarka, Delhi"),
+]
+
+
+def seed_demo_accounts():
+    with SessionLocal() as db:
+        for acct in DEMO_ACCOUNTS:
+            exists = db.scalar(select(User).where(or_(User.email == acct["email"], User.phone == acct["phone"])))
+            if not exists:
+                db.add(User(**acct, password_hash=hash_password("demo123")))
+        db.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
+    if os.environ.get("SEED_DEMO", "1") != "0":
+        seed_demo_accounts()
     yield
 
 
@@ -96,6 +119,11 @@ def require_role(role: str):
 
 
 # ---------- public ----------
+@app.get("/", include_in_schema=False)
+def frontend():
+    return FileResponse(FRONTEND)
+
+
 @app.get("/health")
 def health():
     return {"ok": True}

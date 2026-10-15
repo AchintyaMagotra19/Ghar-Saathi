@@ -114,3 +114,10 @@ def test_validation(client):
     once = {**ORDER, "start_date": tomorrow(), "plan": "once", "days": []}
     r = client.post("/orders", json=once, headers=auth(token))
     assert r.status_code == 201 and r.json()["amount_inr"] == 450
+
+
+def test_serves_website_and_demo_accounts(client):
+    page = client.get("/")
+    assert page.status_code == 200 and "Ghar Saathi" in page.text
+    for email in ("demo@gharsaathi.in", "helper@gharsaathi.in"):
+        assert client.post("/auth/login", json={"identifier": email, "password": "demo123"}).status_code == 200
